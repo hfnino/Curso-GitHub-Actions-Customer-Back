@@ -1,0 +1,50 @@
+name: Build Features Branches # Nombre del workflow
+
+# EVentos que lo ejectutan este workflow
+on:
+  push:
+    branches:
+      - 'feature/*' # El workflow se ejecuta cuando se detecta un evento 'Push' en ramas que comienzan con 'feature/' 
+  pull_request:
+    branches:
+      - 'master'
+
+jobs:
+  build-features:   # Nombre del job definido según la necesidad
+    runs-on: ubuntu-latest # definimos el runner y/o la maquina virtual en donde se va a ejecutar este job, puede ser de ubuntu u 
+                          # otra distribución de Linux, o incluso Windows o MacOS en la versión que se necesite
+
+    # Ahora, debemos definir los pasos que se van a ejecutar en este job, en este caso, vamos a compilar un proyecto Java con Maven.
+
+    # GitHub Actions nos ofrece múltiples posibilidades para configurar en los pasos y no son más que pequeñas aplicaciones que ha 
+    # creado GitHub Actions y la comunidad y que incluso nosotros podríamos crear y publicar en un Market Place, y esta suite de 
+    # GitHub Actions tiene acceso a todo lo que hay publicado en ese MarketPlace. La clave está en comprender cuáles son las que
+    # nosotros tenemos que utilizar.
+
+    # Para este ejemplo, en los pasos, podemos definir cada una de las acciones que se van a ejecutar, por ejemplo, podemos
+    # defirnie acciones predefinidas de GitHub Actions, como 'actions/checkout' para descargar el código del repositorio,
+    # 'actions/setup-java' para configurar el JDK, 'actions/cache' para almacenar en caché las dependencias de Maven y 
+    # 'actions/upload-artifact' para subir los artefactos  generados por la compilación y estas Actions, las podemos encontrar en
+    # GitHub Marketplace.
+
+    steps:
+      - name: Pull and checkout from git repository # Nombre del paso que se va a ejecutar
+        uses: actions/checkout@v4 # Esta Action descarga el codigo del repositorio para el runner y/o maquina virtual que definimos
+                                  # anteriormente en la sección 'runs-on'
+
+      - name: Commads thers # Nombre del paso que se va a ejecutar
+        run: |
+          echo "Pulling and checking out the code from the repository"
+
+      - name: Set up JDK # Nombre del paso que se va a ejecutar
+        uses: actions/setup-java@v4 # Esta Action configura el JDK que se va a utilizar en el runner y/o maquina virtual
+        with:
+          distribution: 'temurin' # Distribución del JDK que se va a utilizar, en este caso, se utiliza la distribución Temurin
+          java-version: '17' # Versión del JDK que se va a utilizar, en este caso, la versión 17
+        
+      - name: Build with Maven # Nombre del paso que se va a ejecutar
+        run: |
+          mvn clean install # Este comando compila el proyecto y genera los artefactos necesarios, en este caso, se utiliza Maven
+                            # para compilar el proyecto
+          echo "Build completed successfully" # Mensaje que se muestra en la consola cuando la compilación se completa correctamente
+
