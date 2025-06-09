@@ -13,13 +13,7 @@ jobs:
 
     #********************************* STEPS AND ACTIONS *********************************#
     
-    # En este apartado, definimos los pasos que se van a ejecutar en este job, y cada uno de estos pasos se ejecuta en el runner
-    # y/o maquina virtual que hemos definido anteriormente.
-
-    # Un job es un conjunto de pasos que se ejecutan en un runner y/o maquina virtual, y cada uno de estos pasos puede ser una 
-    # acción predefinida de GitHub Actions o un comando personalizado que se ejecuta en el runner y/o maquina virtual.
-    # En este caso, vamos a definir un job que se va a ejecutar cuando se abra o se reabra un Pull Request en la rama 'develop'.
-   # Ahora, debemos definir los pasos que se van a ejecutar en este job, en este caso, vamos a compilar un proyecto Java con Maven.
+    # Ahora, debemos definir los pasos que se van a ejecutar en este job, en este caso, vamos a compilar un proyecto Java con Maven.
 
     # GitHub Actions nos ofrece múltiples posibilidades para configurar en los pasos y no son más que pequeñas aplicaciones que ha 
     # creado GitHub Actions y la comunidad y que incluso nosotros podríamos crear y publicar en un Market Place, y esta suite de 
