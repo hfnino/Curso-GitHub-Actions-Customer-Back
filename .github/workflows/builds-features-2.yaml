@@ -18,7 +18,7 @@ jobs:
     # GitHub Actions tiene acceso a todo lo que hay publicado en ese MarketPlace. La clave está en comprender cuáles son las que
     # nosotros tenemos que utilizar.
 
-    # Para este ejemplo, en los pasos, podemos definir cada una de las acciones que se van a ejecutar, por ejemplo, podemos
+    # Por ejemplo, en los pasos, podemos definir cada una de las acciones que se van a ejecutar, por ejemplo, podemos
     # defirnie acciones predefinidas de GitHub Actions, como 'actions/checkout' para descargar el código del repositorio,
     # 'actions/setup-java' para configurar el JDK, 'actions/cache' para almacenar en caché las dependencias de Maven y 
     # 'actions/upload-artifact' para subir los artefactos  generados por la compilación y estas Actions, las podemos encontrar en
@@ -48,8 +48,9 @@ jobs:
           path: ~/.m2/repository # Ruta donde se almacenan las dependencias de Maven
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }} # Clave para identificar la caché, se basa en el sistema operativo
                                                                     # y el hash de los archivos pom.xml
+          # ${{ runner.os }}-maven-  es la clave de restauración para la caché, se utiliza si no se encuentra una coincidencia exacta.
           restore-keys: |
-            ${{ runner.os }}-maven- # Clave de restauración para la caché, se utiliza si no se encuentra una coincidencia exacta
+            ${{ runner.os }}-maven-
         
       - name: Build with Maven # Nombre del paso que se va a ejecutar
         run: |
