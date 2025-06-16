@@ -7,12 +7,13 @@ on:
     types: [ opened, reopened ] # El workflow se ejecuta cuando se abre o se reabre un Pull Request
 
 jobs:
-  build-features:   # Nombre del job definido según la necesidad
+  build-features: # Nombre del job: 'build-features', este job se ejecuta cuando se detecta un evento 'Pull Request' en la rama 'develop'
+                  # Este job se encarga de compilar el proyecto Java con Maven y subir los artefactos generados a GitHub Actions
     runs-on: ubuntu-latest # definimos el runner y/o la maquina virtual en donde se va a ejecutar este job, puede ser de ubuntu u 
                           # otra distribución de Linux, o incluso Windows o MacOS en la versión que se necesite
 
     #********************************* STEPS AND ACTIONS *********************************#
-    
+
     # Ahora, debemos definir los pasos que se van a ejecutar en este job, en este caso, vamos a compilar un proyecto Java con Maven.
 
     # GitHub Actions nos ofrece múltiples posibilidades para configurar en los pasos y no son más que pequeñas aplicaciones que ha 
@@ -60,3 +61,49 @@ jobs:
                                 # en este caso, se utiliza Maven
           echo "Build with Maven completed successfully" # Mensaje que se muestra en la consola cuando la compilación se completa correctamente
 
+  merge-feature-into-develop: # Nombre del job: 'merge-feature-into-develop', este job se ejecuta cuando se detecta un evento 'Pull Request' en la rama 'develop'
+                              # Este job se encarga de fusionar el código del Pull Request en la rama 'develop' y subir los cambios al repositorio
+    runs-on: ubuntu-latest # Definimos el runner y/o la maquina virtual en donde se va a ejecutar este job, puede ser de ubuntu u 
+                              # otra distribución de Linux, o incluso Windows o MacOS en la versión que se necesite
+
+    needs: build-features # Este job se ejecuta después de que el job 'build-features' se haya completado con éxito. Esto se logra mediante la propiedad 'needs',
+                          # que indica que este job depende o necesita de la finalización exitosa del job 'build-features'
+    if: ${{ success() }} # Este job se ejecuta solo si el job 'build-features' se ha completado con éxito. Esto se logra mediante la propiedad 'if',
+                          # que evalúa si el job anterior fue exitoso
+    # [For a specific job, you can use jobs.<job_id>.permissions to modify the default permissions granted to the 
+    # GITHUB_TOKEN](https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs)
+    permissions: # Definimos los permisos que se le van a otorgar al job, en este caso, se le otorgan permisos de lectura y escritura
+                # a los repositorios, issues, pull requests y contenidos del repositorio
+                # Estos permisos son necesarios para que el job pueda fusionar el código del Pull Request en la rama 'develop' y subir los
+                # cambios al repositorio
+      contents: write
+      pull-requests: write
+    
+    steps:
+      - name: Pull and checkout from git repository # Nombre del paso que se va a ejecutar
+        uses: actions/checkout@v3 # Esta Action descarga el código del repositorio para el runner y/o maquina virtual que definimos
+        with:
+          #Dowload the code from destination branch (develop)
+          ref: ${{ github.base_ref }} # Esta línea asegura que se descargue el código de la rama 'develop'
+          fetch-depth: 0 # Esta línea asegura que se descargue todo el historial del repositorio, no solo el último commit
+
+      - name: Merge to development branch # Nombre del paso que se va a ejecutar
+        if: ${{ success() }} # Este paso se ejecuta solo si el job 'build-features' se ha completado con éxito
+        run: |
+          # Configura el correo electrónico del usuario que realiza la fusión
+          git config --global user.email "EMAIL-OF-WORKFLOW@USER"
+
+          # Configura el nombre del usuario que realiza la fusión
+          git config --global user.name "WORKFLOW-USER"
+
+          # Using -m "message" on merge command is mandatory here in order to avoid open a text editor to write a commit message
+          git merge --no-ff --verbose origin/${{ github.event.pull_request.head.ref }} -m "Merge pull request #${{ github.event.number }}"
+
+      - name: Push changes after merge # Nombre del paso que se va a ejecutar
+        # Este paso se encarga de subir los cambios al repositorio después de la fusión
+        if: ${{ success() }} # Este paso se ejecuta solo si el job 'build-features' se ha completado con éxito
+        # Esta Action sube los cambios al repositorio, en este caso, se utiliza la Action 'ad-m/github-push-action'
+        uses: ad-m/github-push-action@master 
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }} 
+          branch: ${{ github.base_ref }} # Esta línea asegura que los cambios se suban a la rama 'develop'
