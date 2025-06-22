@@ -61,14 +61,15 @@ jobs:
                                 # en este caso, se utiliza Maven
           echo "Build with Maven completed successfully" # Mensaje que se muestra en la consola cuando la compilación se completa correctamente
 
-  merge-feature-into-develop: # Nombre del job: 'merge-feature-into-develop', este job se ejecuta cuando se detecta un evento 'Pull Request' en la rama 'develop'
+  job-2-workflow-2-merge-feature-into-develop: # Nombre del job: 'merge-feature-into-develop', este job se ejecuta cuando se detecta un evento 'Pull Request' en la rama 'develop'
                               # Este job se encarga de fusionar el código del Pull Request en la rama 'develop' y subir los cambios al repositorio
     runs-on: ubuntu-latest # Definimos el runner y/o la maquina virtual en donde se va a ejecutar este job, puede ser de ubuntu u 
                               # otra distribución de Linux, o incluso Windows o MacOS en la versión que se necesite
 
-    needs: build-features # Este job se ejecuta después de que el job 'build-features' se haya completado con éxito. Esto se logra mediante la propiedad 'needs',
-                          # que indica que este job depende o necesita de la finalización exitosa del job 'build-features'
-    if: ${{ success() }} # Este job se ejecuta solo si el job 'build-features' se ha completado con éxito. Esto se logra mediante la propiedad 'if',
+    needs: job-1-workflow-2-build-features # Este job se ejecuta después de que el job 'job-1-workflow-2-build-features' se haya completado con éxito. 
+                          # Esto se logra mediante la propiedad 'needs', que indica que este job depende o necesita de la finalización exitosa
+                          # del job 'job-1-workflow-2-build-features'
+    if: ${{ success() }} # Este job se ejecuta solo si el job 'job-1-workflow-2-build-features' se ha completado con éxito. Esto se logra mediante la propiedad 'if',
                           # que evalúa si el job anterior fue exitoso
     # [For a specific job, you can use jobs.<job_id>.permissions to modify the default permissions granted to the 
     # GITHUB_TOKEN](https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs)
