@@ -1,9 +1,9 @@
-name: Publish jar as artifact 
+name: Workflow 3 => Publish jar as artifact
 on:
   repository_dispatch:
     types: [publish-artifact-event]
 jobs:
-  dowlonad-artifact-job:
+  job-1-workflow-3-download-artifact-job:
     runs-on: ubuntu-latest
     env:
       ARTIFACT_NAME: 'ada_qartz-0.0.1-SNAPSHOT.jar'
@@ -50,7 +50,8 @@ jobs:
       - name: build with maven
         #The "SNAPSHOT" term means that the build is a snapshot of your code at a given time    
         #The --batch-mode flag indicates that the build should be run without any user interaction
-        #(Avoid caching versions of your own code)The --update-snapshots flag tells Maven to check for any updated snapshots of dependencies and use those instead of the versions specified in the project's pom.xml file. 
+        #(Avoid caching versions of your own code)The --update-snapshots flag tells Maven to check for any updated snapshots
+        #of dependencies and use those instead of the versions specified in the project's pom.xml file. 
         #The package argument tells Maven to package the project into a distributable format, such as a JAR or WAR file.
         run: |
            mvn clean test package -DskipTests=true --batch-mode --update-snapshots      

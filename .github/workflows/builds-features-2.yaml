@@ -1,13 +1,13 @@
-name: Build Features Branches # Nombre del workflow
+name: Workflow 2 => Build Features Branches # Nombre del workflow
 
-# EVentos que lo ejectutan este workflow
+# Eventos que lo ejectutan este workflow
 on:
   pull_request:
     branches: [ develop ] # El workflow se ejecuta cuando se detecta un evento 'Pull Request' en la rama 'develop'
     types: [ opened, reopened ] # El workflow se ejecuta cuando se abre o se reabre un Pull Request
 
 jobs:
-  build-features: # Nombre del job: 'build-features', este job se ejecuta cuando se detecta un evento 'Pull Request' en la rama 'develop'
+  job-1-workflow-2-build-features: # Nombre del job: 'build-features', este job se ejecuta cuando se detecta un evento 'Pull Request' en la rama 'develop'
                   # Este job se encarga de compilar el proyecto Java con Maven y subir los artefactos generados a GitHub Actions
     runs-on: ubuntu-latest # definimos el runner y/o la maquina virtual en donde se va a ejecutar este job, puede ser de ubuntu u 
                           # otra distribución de Linux, o incluso Windows o MacOS en la versión que se necesite
