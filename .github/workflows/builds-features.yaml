@@ -1,6 +1,6 @@
-name: Build Features Branches # Nombre del workflow
+name: Workflow 1 => Build Features Branches # Nombre del workflow
 
-# EVentos que lo ejectutan este workflow
+# Eventos que lo ejectutan este workflow
 on:
   push:
     branches:
@@ -10,7 +10,7 @@ on:
       - 'master'
 
 jobs:
-  build-features:   # Nombre del job definido según la necesidad
+  job-1-workflow-1-build-features:   # Nombre del job definido según la necesidad
     runs-on: ubuntu-latest # definimos el runner y/o la maquina virtual en donde se va a ejecutar este job, puede ser de ubuntu u 
                           # otra distribución de Linux, o incluso Windows o MacOS en la versión que se necesite
 
