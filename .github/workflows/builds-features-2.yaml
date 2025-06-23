@@ -7,8 +7,9 @@ on:
     types: [ opened, reopened ] # El workflow se ejecuta cuando se abre o se reabre un Pull Request
 
 jobs:
-  job-1-workflow-2-build-features: # Nombre del job: 'build-features', este job se ejecuta cuando se detecta un evento 'Pull Request' en la rama 'develop'
-                  # Este job se encarga de compilar el proyecto Java con Maven y subir los artefactos generados a GitHub Actions
+  job-1-workflow-2-build-features: # Nombre del job: 'job-1-workflow-2-build-features', este job se ejecuta cuando se detecta un evento
+                  #'Pull Request' en la rama 'develop' Este job se encarga de compilar el proyecto Java con Maven y subir los artefactos
+                  # generados a GitHub Actions
     runs-on: ubuntu-latest # definimos el runner y/o la maquina virtual en donde se va a ejecutar este job, puede ser de ubuntu u 
                           # otra distribución de Linux, o incluso Windows o MacOS en la versión que se necesite
 
@@ -89,7 +90,7 @@ jobs:
           fetch-depth: 0 # Esta línea asegura que se descargue todo el historial del repositorio, no solo el último commit
 
       - name: Merge to development branch # Nombre del paso que se va a ejecutar
-        if: ${{ success() }} # Este paso se ejecuta solo si el job 'build-features' se ha completado con éxito
+        if: ${{ success() }} # Este paso se ejecuta solo si el job 'job-1-workflow-2-build-features' se ha completado con éxito
         run: |
           # Configura el correo electrónico del usuario que realiza la fusión
           git config --global user.email "EMAIL-OF-WORKFLOW@USER"
@@ -102,9 +103,21 @@ jobs:
 
       - name: Push changes after merge # Nombre del paso que se va a ejecutar
         # Este paso se encarga de subir los cambios al repositorio después de la fusión
-        if: ${{ success() }} # Este paso se ejecuta solo si el job 'build-features' se ha completado con éxito
+        if: ${{ success() }} # Este paso se ejecuta solo si el job 'job-1-workflow-2-build-features' se ha completado con éxito
         # Esta Action sube los cambios al repositorio, en este caso, se utiliza la Action 'ad-m/github-push-action'
         uses: ad-m/github-push-action@master 
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }} 
           branch: ${{ github.base_ref }} # Esta línea asegura que los cambios se suban a la rama 'develop'
+
+      - name: trigger deploy artifact # Nombre del paso que se va a ejecutar
+        # Este paso se encarga de disparar un evento de GitHub Actions para notificar que se ha publicado un artefacto y 
+        # este evento puede ser utilizado por otros workflows para realizar acciones adicionales, como desplegar el artefacto
+        # o enviar notificaciones a otros sistemas
+        if: success()  # Este paso se ejecuta solo si el job 'job-1-workflow-2-build-features' se ha completado con éxito
+        uses: peter-evans/repository-dispatch@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: ${{ github.repository }}
+          event-type: publish-artifact-event
+          client-payload: '{ "base_branch": "${{ github.base_ref }}" }'
