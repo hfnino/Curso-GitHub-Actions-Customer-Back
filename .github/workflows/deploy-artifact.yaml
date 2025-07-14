@@ -1,0 +1,295 @@
+name: Workflow 4 => Deploy artifact
+on:
+  # Este workflow se ejecuta cuando se recibe un evento de tipo 'repository_dispatch' con el tipo 'deploy-artifact-event'
+  # Este evento se dispara desde otro workflow, en este caso, desde el workflow 'publish-jar-as-artifact.yaml'
+  repository_dispatch:
+    types: [deploy-artifact-event]
+jobs:
+  # Este job se encarga de descargar el artefacto generado por el workflow 'publish-jar-as-artifact.yaml'
+  # y verificar su integridad mediante la comparación de checksums
+  # Además, se encarga de preparar el contexto de construcción de Docker para el siguiente job
+  # que se encargará de construir y subir la imagen de Docker al registro de GitHub
+  job-1-workflow-4-download-artifact-job:
+    # Este job se ejecuta en un runner de Ubuntu
+    # Puedes cambiar 'ubuntu-latest' por otro runner si lo necesitas
+    # Por ejemplo, puedes usar 'windows-latest' o 'macos-latest'
+    # dependiendo de tus necesidades y del entorno en el que quieras ejecutar el job
+    runs-on: ubuntu-latest
+    # Definimos los permisos que se le van a otorgar al job, en este caso, se le otorgan permisos de lectura y escritura
+    # a los repositorios, acciones y paquetes de GitHub
+    # Estos permisos son necesarios para que el job pueda descargar el artefacto generado por el workflow
+    # 'publish-jar-as-artifact.yaml' y subir la imagen de Docker al registro de GitHub
+    # Además, se le otorgan permisos de lectura a los contenidos del repositorio
+    # y a las acciones de GitHub, lo que permite al job acceder a los archivos
+    # y a las acciones necesarias para realizar las operaciones de descarga y subida
+    # de la imagen de Docker
+    permissions:
+      contents: read
+      actions: read    
+    steps:
+      # Este paso imprime el valor del checksum recibido en el payload del evento repository_dispatch.
+      # Sirve para depuración y para verificar que el valor se está recibiendo correctamente.
+      - run: echo ${{ github.event.client_payload.checksum }}
+
+      # Este paso imprime el nombre del artefacto recibido en el payload del evento repository_dispatch.
+      # Sirve para depuración y para verificar que el nombre del artefacto se está recibiendo correctamente.
+      - run: echo ${{ github.event.client_payload.artifact_name }}
+      - name: Retrieve Payload
+        run: |
+          echo ${{ github.event.client_payload.checksum }}
+
+      # Este paso descarga el artefacto generado por el workflow 'publish-jar-as-artifact.yaml'
+      # y lo guarda en la ruta '/tmp/artifactjar' del runner
+      # Utiliza la acción 'dawidd6/action-download-artifact@v2'
+      # que permite descargar artefactos de otros workflows de GitHub Actions
+      # El artefacto se descarga solo si el workflow 'publish-jar-as-artifact.yaml'
+      # ha finalizado con éxito, gracias a la propiedad 'workflow_conclusion: success'
+      # Además, se utiliza el token de GitHub para autenticar la descarga del artefacto
+      # y se especifica el nombre del artefacto a descargar, que se obtiene
+      # del payload del evento repository_dispatch
+      - name: Download artifact
+        uses: dawidd6/action-download-artifact@v2
+        id: download-artifact
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          workflow: publish-jar-as-artifact.yaml
+          workflow_conclusion: success
+          name: artifactjar
+          path: /tmp/artifactjar
+      
+      # Este paso muestra la estructura de los archivos descargados
+      # en la ruta '/tmp/artifactjar' del runner
+      # Utiliza el comando 'ls -R' para listar recursivamente los archivos y
+      # directorios en la ruta especificada
+      # Esto es útil para verificar que el artefacto se ha descargado correctamente
+      # y para ver la estructura de los archivos dentro del artefacto
+      - name: Display structure of downloaded files
+        run: ls -R /tmp/artifactjar
+
+      # Este paso calcula el checksum del artefacto descargado
+      # Utiliza el comando 'sha1sum' para calcular el checksum del archivo
+      # especificado en el payload del evento repository_dispatch
+      # El checksum se guarda en una variable de entorno llamada 'HASH'
+      # que se puede utilizar en pasos posteriores del workflow
+      # El comando 'awk' se utiliza para extraer solo el valor del checksum
+      # y no el nombre del archivo, ya que 'sha1sum' devuelve ambos valores
+      # El valor del checksum se guarda en la variable de entorno 'HASH'
+      # que se puede utilizar en pasos posteriores del workflow
+      # Esto es útil para verificar la integridad del artefacto descargado
+      # y asegurarse de que coincide con el checksum esperado
+      # que se recibe en el payload del evento repository_dispatch
+      # Si el checksum no coincide, se puede considerar que la descarga del artefacto ha
+      # fallado o que el artefacto ha sido modificado de alguna manera
+      # y se puede abortar el workflow para evitar problemas posteriores
+      # en la construcción de la imagen de Docker o en el despliegue del artefacto.
+      - name: checksum of download-artifact
+        if: success()
+        id: hash      
+        run: echo "HASH=$(sha1sum /tmp/artifactjar/${{ github.event.client_payload.artifact_name }} | awk '{ print $1 }')" >> $GITHUB_ENV
+
+      # Este paso compara el checksum calculado del artefacto descargado
+      # con el checksum recibido en el payload del evento repository_dispatch
+      # Si los checksums coinciden, se considera que la descarga del artefacto ha
+      # sido exitosa y se continúa con los siguientes pasos del workflow
+      # Si los checksums no coinciden, se considera que la descarga del artefacto
+      # ha fallado o que el artefacto ha sido modificado de alguna manera
+      # En este caso, se muestra un mensaje de error y se aborta el workflow
+      # para evitar problemas posteriores en la construcción de la imagen de Docker
+      # o en el despliegue del artefacto
+      # Esto es útil para garantizar la integridad del artefacto descargado
+      # y asegurarse de que coincide con el checksum esperado
+      # que se recibe en el payload del evento repository_dispatch.
+      - name: compare checksum 
+        run: |
+          if [ "${{ env.HASH }}" == "${{ github.event.client_payload.checksum }}" ]; then
+              echo "The checksum are equals! seccesfully operations."
+          else
+              echo "¡The checksum are no equals! failure operation."            
+              exit 1;
+          fi
+      
+      # Este paso prepara el contexto de construcción de Docker
+      # para el siguiente job que se encargará de construir y subir la imagen de Docker al
+      # registro de GitHub.
+      # Utiliza el comando 'cp' para copiar el Dockerfile y el artefacto
+      # descargado a la ruta '/tmp' del runner, que se utilizará como contexto
+      # de construcción de Docker en el siguiente job.
+      # El Dockerfile se copia desde la ruta '.docker/Dockerfile' del repositorio
+      # y el artefacto se copia desde la ruta '/tmp/artifactjar/${{ github.event.client_payload.artifact_name }}'
+      # que es la ruta donde se ha descargado el artefacto en el paso anterior.
+      # Después de copiar los archivos, se muestra la estructura de los archivos
+      # en la ruta '/tmp' del runner para verificar que los archivos
+      # se han copiado correctamente y que el contexto de construcción de Docker
+      # está listo para ser utilizado en el siguiente job.
+      # Esto es útil para preparar el entorno de construcción de Docker
+      # y asegurarse de que todos los archivos necesarios están disponibles
+      # para construir la imagen de Docker correctamente.
+      # Además, se utiliza el comando 'ls -la' para mostrar la estructura de los
+      # archivos en la ruta '/tmp' del runner, lo que permite verificar que los archivos
+      # se han copiado correctamente y que el contexto de construcción de Docker
+      # está listo para ser utilizado en el siguiente job.
+      - name: Prepare Docker build context
+        uses: actions/checkout@v3        
+        if: success()
+      - run: |
+          echo print the current directory show files
+          ls -la 
+          echo preparing docker build context
+          cp .docker/Dockerfile /tmp/Dockerfile
+          cp /tmp/artifactjar/${{ github.event.client_payload.artifact_name }} /tmp/${{ github.event.client_payload.artifact_name }}
+          ls -la /tmp
+
+      # Este paso sube y/o publica el contexto de construcción de Docker como un artefacto
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: dockerBuildContext
+          path: |
+            /tmp/Dockerfile
+            /tmp/${{ github.event.client_payload.artifact_name }}
+
+  # Este job se encarga de construir y subir la imagen de Docker que creamos anteriormente
+  # Utiliza el contexto de construcción preparado en el job anterior
+  # y se encarga de construir la imagen de Docker utilizando el Dockerfile y el artefacto descargado
+  # Además, se encarga de subir la imagen de Docker al registro de GitHub
+  # utilizando la acción 'docker/build-push-action@v4'
+  # Esta acción permite construir y subir imágenes de Docker de manera sencilla
+  # y se encarga de manejar la autenticación y la subida de la imagen al registro
+  # de GitHub, lo que facilita el proceso de construcción y despliegue de aplicaciones
+  # basadas en Docker.
+  # El job se ejecuta después del job 'job-1-workflow-4-download-artifact-job'
+  # que se encarga de descargar el artefacto y preparar el contexto
+  # de construcción de Docker.
+  # El job se ejecuta en un runner de Ubuntu y se le otorgan permisos de lectura y escritura
+  # a los contenidos del repositorio, acciones y paquetes de GitHub.
+  # Estos permisos son necesarios para que el job pueda acceder al contexto de construcción
+  # de Docker y subir la imagen de Docker al registro de GitHub.
+  # Además, se le otorgan permisos de lectura a los contenidos del repositorio
+  # y a las acciones de GitHub, lo que permite al job acceder a los archivos
+  # y a las acciones necesarias para realizar las operaciones de construcción y subida
+  # de la imagen de Docker.
+  job-2-workflow-4-docker-job:
+     needs:
+        - job-1-workflow-4-download-artifact-job # Este job depende del job anterior para asegurarse de que el artefacto 
+                                              # se ha descargado y preparado correctamente
+
+     runs-on: ubuntu-latest
+     permissions:
+       contents: read
+       actions: read
+       packages: write
+     steps: 
+
+      # Esta Action se encarga de configurar el entorno de Docker
+      # y preparar el runner para poder construir y subir imágenes de Docker.
+      # Utiliza la acción 'docker/setup-qemu-action@v2' para configurar QEMU,
+      # que es un emulador de hardware que permite ejecutar imágenes de Docker
+      # en diferentes arquitecturas de hardware.
+      # Esto es útil para construir imágenes de Docker que sean compatibles
+      # con diferentes arquitecturas, como x86_64, ARM, etc.  
+      - name : Set up QEMU 
+        uses : docker/setup-qemu-action@v2 
+
+      # Esta Action se encarga de configurar Docker Buildx, que es una extensión de Docker
+      # que permite construir imágenes de Docker de manera más eficiente y flexible.
+      # Utiliza la acción 'docker/setup-buildx-action@v2' para configurar Docker Buildx
+      # y preparar el entorno de construcción de Docker.
+      # Docker Buildx permite construir imágenes de Docker utilizando múltiples plataformas
+      # y arquitecturas, lo que facilita la creación de imágenes de Docker que sean
+      # compatibles con diferentes entornos y arquitecturas de hardware.   
+      - name : Set up Docker Buildx 
+        uses : docker/setup-buildx-action@v2 
+
+      # Esta Action se encarga de autenticar el runner con el registro de Docker Hub
+      # Utiliza la acción 'docker/login-action@v2' para iniciar sesión en el registro de Docker Hub
+      # utilizando el token de GitHub proporcionado en los secretos del repositorio.
+      # Esto es necesario para poder subir la imagen de Docker al registro de GitHub
+      # y para autenticar el runner con el registro de Docker Hub.
+      # La autenticación se realiza utilizando el nombre de usuario del actor que ha disparado el
+      # evento de GitHub y el token de GitHub proporcionado en los secretos del repositorio.
+      # Esto permite que el runner tenga acceso al registro de Docker Hub y pueda subir la
+      # imagen de Docker construida en el siguiente paso.     
+      - name : Login to Docker Hub 
+        uses : docker/login-action@v2 
+        with :
+          registry: ghcr.io
+          username: ${{ github.actor }}   
+          password : ${{ secrets.GITHUB_TOKEN }} 
+
+      # Este paso descarga el artefacto previamente subido por el job anterior cuando usamos
+      # la acción 'actions/upload-artifact@v3' en la línea 144.
+      # Utiliza la acción 'actions/download-artifact@v3' para descargar el artefacto
+      # que contiene el contexto de construcción de Docker, que incluye el Dockerfile
+      # y el artefacto descargado en el job anterior.
+      # El artefacto se descarga en la ruta './dockerBuildContext' del runner
+      # y se utiliza como contexto de construcción de Docker en el siguiente paso.
+      # Esto es útil para preparar el entorno de construcción de Docker
+      # y asegurarse de que todos los archivos necesarios están disponibles
+      # para construir la imagen de Docker correctamente.
+      # El nombre del artefacto se especifica como 'dockerBuildContext'
+      # y se descarga en la ruta './dockerBuildContext' del runner.
+      # Esto permite que el siguiente paso tenga acceso al contexto de construcción de Docker
+      # y pueda construir la imagen de Docker utilizando el Dockerfile y el artefacto descargado.
+      # Debemos tener en cuenta que la action 'actions/download-artifact@v3' es diferente a la
+      # action 'dawidd6/action-download-artifact@v2' que fue la que se utilizó en el job anterior
+      # en la linea 51, ya que esta última se utiliza para descargar artefactos de otros workflows
+      # de GitHub Actions, mientras que 'actions/download-artifact@v3' se utiliza para descargar
+      # artefactos que se han subido en el mismo workflow, pueden ser de jobs diferentes, pero
+      # pertenecen al mismo workflow.
+      - name: Download artifact
+        uses: actions/download-artifact@v3
+        with:
+          name: dockerBuildContext
+          path: ./dockerBuildContext
+
+      # Este paso muestra la estructura de los archivos descargados
+      # en la ruta './dockerBuildContext' del runner
+      # Utiliza el comando 'ls -R' para listar recursivamente los archivos y
+      # directorios en la ruta especificada.
+      # Esto es útil para verificar que el artefacto se ha descargado correctamente
+      # y para ver la estructura de los archivos dentro del artefacto.
+      # Además, permite verificar que el contexto de construcción de Docker
+      # está listo para ser utilizado en la construcción de la imagen de Docker.
+      # Esto es importante para asegurarse de que el Dockerfile y el artefacto
+      # están en la ubicación correcta y que se pueden utilizar para construir la imagen de Docker.
+      - name: Display structure of downloaded files
+        run: ls -R dockerBuildContext
+
+      # Este paso compila y sube la imagen de Docker utilizando la acción 'docker/build-push-action@v4'
+      # Utiliza el contexto de construcción preparado en el paso anterior y se encarga de construir 
+      # la imagen de Docker utilizando el Dockerfile y el artefacto descargado en el job anterior.
+      # Además, se encarga de subir la imagen de Docker al registro de GitHub utilizando el token de GitHub
+      # proporcionado en los secretos del repositorio. La acción 'docker/build-push-action@v4' permite
+      # construir y subir imágenes también se encarga de manejar la autenticación y la subida
+      # de la imagen al registro de GitHub, lo que facilita el proceso de construcción y despliegue de aplicaciones
+      # basadas en Docker. En este paso, se especifica el contexto de construcción de Docker como 
+      # './dockerBuildContext' que es la ruta donde se ha descargado el artefacto y el Dockerfile en el paso anterior.
+      # Además, se especifica el archivo Dockerfile como './dockerBuildContext/Dockerfile'
+      # que es la ruta donde se ha copiado el Dockerfile en el paso anterior.
+      # También se pasan los parámetros necesarios para el Dockerfile, como el nombre del artefacto que se obtiene del
+      # payload del evento repository_dispatch y la contraseña de la base de datos que se obtiene de los secretos del
+      # repositorio. La imagen se sube al registro de GitHub con el nombre 
+      # 'ghcr.io/${{ github.repository_owner}}/cutomer-back:${{ github.sha }}' que incluye el nombre del propietario 
+      # del repositorio, el nombre de la imagen y el hash del commit actual. Esto permite que la imagen de Docker sea
+      # única y se pueda identificar fácilmente en el registro de GitHub.
+      # Además, se especifica que la imagen se debe subir al registro de GitHub utilizando la propiedad 'push: true',
+      # lo que indica que la imagen debe ser subida al registro después de ser construida. Si no se especifica
+      # 'push: true', la imagen se construirá pero no se subirá al registro, lo que puede ser útil para pruebas locales
+      # o para construir imágenes sin necesidad de subirlas al registro de GitHub.  Esto es útil para construir y
+      # desplegar aplicaciones basadas en Docker de manera sencilla y eficiente, y para asegurarse de que la imagen de
+      # Docker está disponible en el registro de GitHub para su uso posterior.
+      - name : Build and push image using action
+        uses : docker/build-push-action@v4
+        with :
+          context : ./dockerBuildContext # Context where Dockerfile and artifact(.jar, .war ...) lives
+          file : ./dockerBuildContext/Dockerfile # Where  Dockerfile is it. 
+          #Parameters that our Dockerfile need.
+          build-args: |      
+            JAR_FILE=${{ github.event.client_payload.artifact_name }}
+            DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          push : true # Push image to registry, false by deafult.
+          tags : ghcr.io/${{ github.repository_owner}}/cutomer-back:${{ github.sha }} # The image ful name, include 
+                                                                              #repository, user, image name and tag 
+    
+
+
