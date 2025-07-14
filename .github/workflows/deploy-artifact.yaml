@@ -141,7 +141,7 @@ jobs:
 
       # Este paso sube y/o publica el contexto de construcción de Docker como un artefacto
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: dockerBuildContext
           path: |
