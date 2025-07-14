@@ -237,7 +237,7 @@ jobs:
       # artefactos que se han subido en el mismo workflow, pueden ser de jobs diferentes, pero
       # pertenecen al mismo workflow.
       - name: Download artifact
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: dockerBuildContext
           path: ./dockerBuildContext
