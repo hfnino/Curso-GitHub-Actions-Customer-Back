@@ -217,8 +217,8 @@ jobs:
           password : ${{ secrets.GITHUB_TOKEN }} 
 
       # Este paso descarga el artefacto previamente subido por el job anterior cuando usamos
-      # la acción 'actions/upload-artifact@v3' en la línea 144.
-      # Utiliza la acción 'actions/download-artifact@v3' para descargar el artefacto
+      # la acción 'actions/upload-artifact@v4' en la línea 144.
+      # Utiliza la acción 'actions/download-artifact@v4' para descargar el artefacto
       # que contiene el contexto de construcción de Docker, que incluye el Dockerfile
       # y el artefacto descargado en el job anterior.
       # El artefacto se descarga en la ruta './dockerBuildContext' del runner
@@ -230,10 +230,10 @@ jobs:
       # y se descarga en la ruta './dockerBuildContext' del runner.
       # Esto permite que el siguiente paso tenga acceso al contexto de construcción de Docker
       # y pueda construir la imagen de Docker utilizando el Dockerfile y el artefacto descargado.
-      # Debemos tener en cuenta que la action 'actions/download-artifact@v3' es diferente a la
+      # Debemos tener en cuenta que la action 'actions/download-artifact@v4' es diferente a la
       # action 'dawidd6/action-download-artifact@v2' que fue la que se utilizó en el job anterior
       # en la linea 51, ya que esta última se utiliza para descargar artefactos de otros workflows
-      # de GitHub Actions, mientras que 'actions/download-artifact@v3' se utiliza para descargar
+      # de GitHub Actions, mientras que 'actions/download-artifact@v4' se utiliza para descargar
       # artefactos que se han subido en el mismo workflow, pueden ser de jobs diferentes, pero
       # pertenecen al mismo workflow.
       - name: Download artifact
